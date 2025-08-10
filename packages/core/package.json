@@ -12,15 +12,15 @@
     ],
     "dependencies": {
         "@padloc/locale": "4.3.0",
-        "typescript": "4.4.3"
+        "typescript": "5.9.2"
     },
     "devDependencies": {
-        "@types/chai": "4.2.18",
-        "@types/mocha": "8.2.2",
-        "chai": "4.3.4",
-        "mocha": "9.2.2",
-        "ts-node": "10.1.0",
-        "typedoc": "0.22.13"
+        "@types/chai": "5.2.2",
+        "@types/mocha": "10.0.10",
+        "chai": "5.2.1",
+        "mocha": "11.7.1",
+        "ts-node": "10.9.2",
+        "typedoc": "0.28.9"
     },
     "scripts": {
         "test": "tsc --noEmit && cd test && mocha -r ts-node/register *.ts",
@@ -32,7 +32,7 @@
         "directory": "packages/core"
     },
     "engines": {
-        "node": "16.x",
-        "npm": "8.x"
+        "node": "22.x",
+        "npm": ">=10.x"
     }
 }

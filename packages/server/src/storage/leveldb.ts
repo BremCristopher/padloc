@@ -1,5 +1,5 @@
 // @ts-ignore
-import level from "level";
+import { Level } from "level";
 import {
     Storage,
     Storable,
@@ -21,16 +21,22 @@ export class LevelDBStorage implements Storage {
     private _db: any;
 
     constructor(public readonly config: LevelDBStorageConfig) {
-        this._db = level(`${this.config.dir}`);
+        this._db = new Level(`${this.config.dir}`);
     }
 
     async get<T extends Storable>(cls: StorableConstructor<T> | T, id: string) {
         const res = cls instanceof Storable ? cls : new cls();
         try {
             const raw = await this._db.get(`${res.kind}_${id}`);
+            // Level 10 returns undefined for non-existent keys instead of throwing
+            if (raw === undefined || raw === null) {
+                throw new Err(ErrorCode.NOT_FOUND, `Cannot find object: ${res.kind}_${id}`);
+            }
             return res.fromJSON(raw);
         } catch (e) {
-            if (e.notFound) {
+            if (e.code === ErrorCode.NOT_FOUND || (e as any).notFound) {
+                throw e;
+            } else if (e.notFound) {
                 throw new Err(ErrorCode.NOT_FOUND, `Cannot find object: ${res.kind}_${id}`);
             } else {
                 throw e;

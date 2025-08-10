@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Network Debug Panel</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            margin: 0;
+            padding: 20px;
+            background: #1e1e1e;
+            color: #fff;
+        }
+        .controls {
+            margin-bottom: 20px;
+            padding: 10px;
+            background: #2d2d30;
+            border-radius: 5px;
+        }
+        button {
+            margin-right: 10px;
+            padding: 5px 15px;
+            background: #007acc;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #005a9e;
+        }
+        .stats {
+            margin-bottom: 10px;
+            color: #aaa;
+        }
+        .log-container {
+            max-height: 80vh;
+            overflow-y: auto;
+            background: #252526;
+            border-radius: 5px;
+            padding: 10px;
+        }
+        .log-entry {
+            margin-bottom: 10px;
+            padding: 10px;
+            background: #1e1e1e;
+            border-left: 3px solid #007acc;
+            border-radius: 3px;
+        }
+        .log-entry.error {
+            border-left-color: #f44336;
+        }
+        .log-entry.success {
+            border-left-color: #4caf50;
+        }
+        .timestamp {
+            color: #888;
+            font-size: 0.9em;
+        }
+        .method {
+            color: #9cdcfe;
+            font-weight: bold;
+        }
+        .url {
+            color: #ce9178;
+        }
+        .status {
+            font-weight: bold;
+        }
+        .status.success { color: #4caf50; }
+        .status.error { color: #f44336; }
+        .status.redirect { color: #ff9800; }
+        .headers, .body {
+            margin-top: 5px;
+            padding: 5px;
+            background: #2d2d30;
+            border-radius: 3px;
+            font-size: 0.9em;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .duration {
+            color: #b5cea8;
+        }
+        .filter-input {
+            padding: 5px;
+            margin-left: 10px;
+            background: #3c3c3c;
+            color: white;
+            border: 1px solid #555;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="controls">
+        <button onclick="clearLogs()">Clear Logs</button>
+        <button onclick="exportLogs()">Export to File</button>
+        <button onclick="toggleAutoScroll()">Toggle Auto-Scroll: <span id="autoScrollStatus">ON</span></button>
+        <input type="text" class="filter-input" placeholder="Filter URLs..." id="filterInput" onkeyup="filterLogs()">
+        <span class="stats">Total: <span id="totalLogs">0</span> | Errors: <span id="errorCount">0</span></span>
+    </div>
+    
+    <div class="log-container" id="logContainer"></div>
+
+    <script>
+        const { ipcRenderer } = require('electron');
+        let autoScroll = true;
+        let allLogs = [];
+        let filter = '';
+
+        async function loadLogs() {
+            const logs = await ipcRenderer.invoke('network:get-logs');
+            allLogs = logs;
+            displayLogs();
+        }
+
+        function displayLogs() {
+            const container = document.getElementById('logContainer');
+            const filteredLogs = filter 
+                ? allLogs.filter(log => log.url.toLowerCase().includes(filter.toLowerCase()))
+                : allLogs;
+            
+            container.innerHTML = filteredLogs.map(log => formatLog(log)).join('');
+            
+            // Update stats
+            document.getElementById('totalLogs').textContent = allLogs.length;
+            document.getElementById('errorCount').textContent = allLogs.filter(log => log.type === 'error').length;
+            
+            if (autoScroll) {
+                container.scrollTop = container.scrollHeight;
+            }
+        }
+
+        function formatLog(log) {
+            const statusClass = log.status ? (
+                log.status >= 200 && log.status < 300 ? 'success' :
+                log.status >= 300 && log.status < 400 ? 'redirect' : 'error'
+            ) : '';
+            
+            const entryClass = log.type === 'error' ? 'error' : 
+                               log.type === 'response' && statusClass === 'success' ? 'success' : '';
+            
+            let html = `<div class="log-entry ${entryClass}">`;
+            html += `<span class="timestamp">${new Date(log.timestamp).toLocaleTimeString()}</span> `;
+            
+            if (log.type === 'request') {
+                html += `<span class="method">${log.method || 'GET'}</span> `;
+                html += `<span class="url">${log.url}</span>`;
+                if (log.headers) {
+                    html += `<div class="headers">Headers: ${JSON.stringify(log.headers, null, 2)}</div>`;
+                }
+                if (log.body) {
+                    html += `<div class="body">Body: ${typeof log.body === 'string' ? log.body : JSON.stringify(log.body, null, 2)}</div>`;
+                }
+            } else if (log.type === 'response') {
+                html += `<span class="status ${statusClass}">${log.status}</span> `;
+                html += `<span class="url">${log.url}</span>`;
+                if (log.duration) {
+                    html += ` <span class="duration">(${log.duration}ms)</span>`;
+                }
+                if (log.headers) {
+                    html += `<div class="headers">Headers: ${JSON.stringify(log.headers, null, 2)}</div>`;
+                }
+                if (log.body) {
+                    html += `<div class="body">Body: ${log.body}</div>`;
+                }
+            } else if (log.type === 'error') {
+                html += `<span class="status error">ERROR</span> `;
+                html += `<span class="url">${log.url}</span>`;
+                html += `<div class="body">Error: ${log.error}</div>`;
+            }
+            
+            html += `</div>`;
+            return html;
+        }
+
+        function clearLogs() {
+            ipcRenderer.invoke('network:clear-logs');
+            allLogs = [];
+            displayLogs();
+        }
+
+        async function exportLogs() {
+            const result = await ipcRenderer.invoke('network:export-logs');
+            if (result.success) {
+                alert(`Logs exported to: ${result.path}`);
+            }
+        }
+
+        function toggleAutoScroll() {
+            autoScroll = !autoScroll;
+            document.getElementById('autoScrollStatus').textContent = autoScroll ? 'ON' : 'OFF';
+        }
+
+        function filterLogs() {
+            filter = document.getElementById('filterInput').value;
+            displayLogs();
+        }
+
+        // Listen for new logs
+        ipcRenderer.on('network:log-added', (event, log) => {
+            allLogs.push(log);
+            displayLogs();
+        });
+
+        // Load initial logs
+        loadLogs();
+        
+        // Refresh logs every 2 seconds
+        setInterval(loadLogs, 2000);
+    </script>
+</body>
+</html>

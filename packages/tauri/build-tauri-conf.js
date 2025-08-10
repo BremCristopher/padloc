@@ -21,11 +21,13 @@ const vendorName = manifest.name;
 const vendorNameLowercase = vendorName.toLowerCase();
 const vendorBaseUrl = process.env.PL_VENDOR_BASE_URL || "https://github.com/padloc/padloc";
 
-tauriConfig.package.version = vendorVersion;
-tauriConfig.package.productName = vendorName;
-tauriConfig.tauri.bundle.identifier = manifest.appId;
-tauriConfig.tauri.windows[0].title = vendorName;
-tauriConfig.tauri.updater.endpoints[0] = `${vendorBaseUrl}/releases/latest/download/tauri-update.json`;
+// Tauri 2.0 configuration format
+tauriConfig.version = vendorVersion;
+tauriConfig.productName = vendorName;
+tauriConfig.identifier = manifest.appId || "app.padloc";
+tauriConfig.app.windows[0].title = vendorName;
+// Remove updater config for now as it's handled differently in Tauri 2.0
+// tauriConfig.tauri.updater.endpoints[0] = `${vendorBaseUrl}/releases/latest/download/tauri-update.json`;
 
 writeFileSync(tauriConfigFilePath, JSON.stringify(tauriConfig, null, 4), "utf-8");
 

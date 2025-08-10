@@ -4,7 +4,6 @@ const { EnvironmentPlugin } = require("webpack");
 const { InjectManifest } = require("workbox-webpack-plugin");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 const { CleanWebpackPlugin } = require("clean-webpack-plugin");
-const WebpackPwaManifest = require("webpack-pwa-manifest");
 const sharp = require("sharp");
 const { version } = require("../../package.json");
 
@@ -122,6 +121,7 @@ module.exports = {
         new HtmlWebpackPlugin({
             title: name,
             template: resolve(__dirname, "src/index.html"),
+            publicPath: adminUrlPath,
             meta: {
                 "Content-Security-Policy": {
                     "http-equiv": "Content-Security-Policy",
@@ -129,16 +129,61 @@ module.exports = {
                 },
             },
         }),
-        new WebpackPwaManifest({
-            name: name,
-            short_name: name,
-            icons: [
-                {
-                    src: resolve(__dirname, assetsDir, "app-icon.png"),
-                    sizes: [96, 128, 192, 256, 384, 512],
-                },
-            ],
-        }),
+        // Custom PWA manifest generator to replace webpack-pwa-manifest
+        {
+            apply(compiler) {
+                compiler.hooks.compilation.tap("Generate PWA Manifest", (compilation) => {
+                    compilation.hooks.processAssets.tapPromise(
+                        {
+                            name: "Generate PWA Manifest",
+                            stage: compiler.webpack.Compilation.PROCESS_ASSETS_STAGE_ADDITIONAL,
+                        },
+                        async () => {
+                            // Generate icons
+                            const iconSizes = [96, 128, 192, 256, 384, 512];
+                            const icons = [];
+                            
+                            for (const size of iconSizes) {
+                                const icon = await sharp(resolve(__dirname, assetsDir, "app-icon.png"))
+                                    .resize({ width: size, height: size })
+                                    .toBuffer();
+                                
+                                const filename = `icon_${size}x${size}.png`;
+                                compilation.emitAsset(
+                                    filename,
+                                    new compiler.webpack.sources.RawSource(icon)
+                                );
+                                
+                                icons.push({
+                                    src: `${adminUrlPath}${filename}`,
+                                    sizes: `${size}x${size}`,
+                                    type: "image/png"
+                                });
+                            }
+                            
+                            // Generate manifest.json
+                            const manifest = {
+                                name: name,
+                                short_name: name,
+                                start_url: adminUrlPath,
+                                display: "standalone",
+                                orientation: "portrait",
+                                background_color: "#ffffff",
+                                theme_color: "#000000",
+                                icons: icons
+                            };
+                            
+                            compilation.emitAsset(
+                                "manifest.json",
+                                new compiler.webpack.sources.RawSource(
+                                    JSON.stringify(manifest, null, 2)
+                                )
+                            );
+                        }
+                    );
+                });
+            },
+        },
         new InjectManifest({
             swSrc: resolve(__dirname, "../app/src/sw.ts"),
             swDest: "sw.js",
@@ -146,20 +191,26 @@ module.exports = {
         }),
         {
             apply(compiler) {
-                compiler.hooks.emit.tapPromise("Generate Favicon", async (compilation) => {
-                    const icon = await sharp(resolve(__dirname, assetsDir, "app-icon.png"))
-                        .resize({
-                            width: 256,
-                            height: 256,
-                        })
-                        .toBuffer();
+                compiler.hooks.compilation.tap("Generate Favicon", (compilation) => {
+                    compilation.hooks.processAssets.tapPromise(
+                        {
+                            name: "Generate Favicon",
+                            stage: compiler.webpack.Compilation.PROCESS_ASSETS_STAGE_ADDITIONAL,
+                        },
+                        async () => {
+                            const icon = await sharp(resolve(__dirname, assetsDir, "app-icon.png"))
+                                .resize({
+                                    width: 256,
+                                    height: 256,
+                                })
+                                .toBuffer();
 
-                    compilation.assets["favicon.png"] = {
-                        source: () => icon,
-                        size: () => Buffer.byteLength(icon),
-                    };
-
-                    return true;
+                            compilation.emitAsset(
+                                "favicon.png",
+                                new compiler.webpack.sources.RawSource(icon)
+                            );
+                        }
+                    );
                 });
             },
         },

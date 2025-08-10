@@ -182,7 +182,7 @@ export class StripeProvisioner extends BasicProvisioner {
 
     constructor(public readonly config: StripeProvisionerConfig, public readonly storage: Storage) {
         super(storage);
-        this._stripe = new Stripe(config.secretKey, { apiVersion: "2020-08-27" });
+        this._stripe = new Stripe(config.secretKey, { apiVersion: "2025-07-30.basil" });
     }
 
     async init() {
@@ -1139,11 +1139,11 @@ export class StripeProvisioner extends BasicProvisioner {
         const paymentMethod =
             subscription && paymentMethods.find((pm) => pm.id === subscription.default_payment_method);
         const country = customer.address?.country || paymentMethod?.card?.country || undefined;
-        const periodEnd = (subscription && new Date(subscription.current_period_end * 1000))?.toLocaleDateString(
+        const periodEnd = (subscription && new Date((subscription as any).current_period_end * 1000))?.toLocaleDateString(
             country
         );
         const status = subscription?.status || "active";
-        const paymentError = (latestInvoice?.payment_intent as Stripe.PaymentIntent)?.last_payment_error;
+        const paymentError = ((latestInvoice as any)?.payment_intent as Stripe.PaymentIntent)?.last_payment_error;
 
         return html`
             <div class="box vertical layout">
@@ -1335,7 +1335,7 @@ export class StripeProvisioner extends BasicProvisioner {
         latestInvoice: Stripe.Invoice | null
     ) {
         const customer = await this._getCustomer(account);
-        const paymentIntent = latestInvoice?.payment_intent as Stripe.PaymentIntent;
+        const paymentIntent = (latestInvoice as any)?.payment_intent as Stripe.PaymentIntent;
         const paymentError = paymentIntent?.last_payment_error;
         return html`
             <div class="box vertical layout">

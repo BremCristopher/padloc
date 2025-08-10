@@ -5,13 +5,12 @@ import {
     generateAuthenticationOptions,
     verifyAuthenticationResponse,
     MetadataService,
+    type PublicKeyCredentialCreationOptionsJSON,
+    type RegistrationResponseJSON,
+    type PublicKeyCredentialRequestOptionsJSON,
+    type AuthenticationResponseJSON,
+    type AuthenticatorSelectionCriteria,
 } from "@simplewebauthn/server";
-import {
-    PublicKeyCredentialCreationOptionsJSON,
-    RegistrationCredentialJSON,
-    PublicKeyCredentialRequestOptionsJSON,
-    AuthenticationCredentialJSON,
-} from "@simplewebauthn/typescript-types";
 import { Err, ErrorCode } from "@padloc/core/src/error";
 import { base64ToBytes, bytesToBase64 } from "@padloc/core/src/encoding";
 import { Auth } from "@padloc/core/src/auth";
@@ -76,12 +75,12 @@ export class WebAuthnServer implements AuthServer {
                   }
                 : { authenticatorAttachment: "cross-platform" };
 
-        const registrationOptions = generateRegistrationOptions({
-            ...this.config,
-            userID: auth.account,
+        const registrationOptions = await generateRegistrationOptions({
+            rpName: this.config.rpName,
+            rpID: this.config.rpID,
+            userID: new TextEncoder().encode(auth.account),
             userName: auth.email,
-            // userDisplayName: account.name,
-            attestationType: "indirect",
+            attestationType: "none",
             authenticatorSelection,
             // excludeCredentials: auth.authenticators
             //     .filter(
@@ -105,7 +104,7 @@ export class WebAuthnServer implements AuthServer {
 
     async activateAuthenticator(
         authenticator: Authenticator<WebAuthnAuthenticatorData>,
-        credential: RegistrationCredentialJSON
+        credential: RegistrationResponseJSON
     ) {
         if (!authenticator.state?.registrationOptions) {
             throw new Err(
@@ -114,10 +113,10 @@ export class WebAuthnServer implements AuthServer {
             );
         }
         const { verified, registrationInfo } = await verifyRegistrationResponse({
+            response: credential,
             expectedChallenge: authenticator.state.registrationOptions.challenge,
             expectedOrigin: this.config.origin,
             expectedRPID: this.config.rpID,
-            credential,
         });
         if (!verified) {
             throw new Err(
@@ -126,11 +125,11 @@ export class WebAuthnServer implements AuthServer {
             );
         }
 
-        const { credentialID, credentialPublicKey, counter, aaguid } = registrationInfo!;
+        const { credential: cred, aaguid } = registrationInfo!;
         authenticator.state.registrationInfo = {
-            credentialID: bytesToBase64(credentialID),
-            credentialPublicKey: bytesToBase64(credentialPublicKey),
-            counter,
+            credentialID: cred.id,
+            credentialPublicKey: bytesToBase64(cred.publicKey),
+            counter: cred.counter,
             aaguid,
         };
 
@@ -145,9 +144,10 @@ export class WebAuthnServer implements AuthServer {
             throw new Err(ErrorCode.AUTHENTICATION_FAILED, "Authenticator not fully registered.");
         }
 
-        const options = generateAuthenticationOptions({
+        const options = await generateAuthenticationOptions({
+            rpID: this.config.rpID,
             allowCredentials: [
-                { type: "public-key", id: base64ToBytes(authenticator.state.registrationInfo.credentialID) },
+                { id: authenticator.state.registrationInfo.credentialID },
             ],
             userVerification: "preferred",
         });
@@ -162,22 +162,22 @@ export class WebAuthnServer implements AuthServer {
     async verifyAuthRequest(
         authenticator: Authenticator<WebAuthnAuthenticatorData>,
         request: AuthRequest<WebAuthnRequestData>,
-        credential: AuthenticationCredentialJSON
+        credential: AuthenticationResponseJSON
     ) {
         if (!authenticator.state?.registrationInfo || !request.state?.authenticationOptions) {
             throw new Err(ErrorCode.AUTHENTICATION_FAILED, "Failed to complete authentication request.");
         }
 
-        const { credentialPublicKey, credentialID, ...rest } = authenticator.state.registrationInfo;
-        const { verified, authenticationInfo } = verifyAuthenticationResponse({
+        const { credentialPublicKey, credentialID, counter } = authenticator.state.registrationInfo;
+        const { verified, authenticationInfo } = await verifyAuthenticationResponse({
+            response: credential,
             expectedChallenge: request.state.authenticationOptions.challenge,
             expectedOrigin: this.config.origin,
             expectedRPID: this.config.rpID,
-            credential,
-            authenticator: {
-                credentialID: Buffer.from(base64ToBytes(credentialID)),
-                credentialPublicKey: Buffer.from(base64ToBytes(credentialPublicKey)),
-                ...rest,
+            credential: {
+                id: credentialID,
+                publicKey: base64ToBytes(credentialPublicKey),
+                counter,
             },
         });
 

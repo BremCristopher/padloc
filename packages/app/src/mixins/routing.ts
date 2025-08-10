@@ -36,8 +36,8 @@ export const Routing = <T extends Constructor<LitElement>>(baseElement: T) => {
 
         connectedCallback() {
             super.connectedCallback();
-            router.addEventListener("before-route-changed", this._beforeRouteChangedHandler);
-            router.addEventListener("route-changed", this._routeHandler);
+            router.addEventListener("before-route-changed", this._beforeRouteChangedHandler as any);
+            router.addEventListener("route-changed", this._routeHandler as any);
             window.addEventListener("beforeunload", this._beforeUnloadHandler);
             app.loaded.then(() => {
                 if (!this._hasRouteHandlerBeenCalled) {
@@ -48,8 +48,8 @@ export const Routing = <T extends Constructor<LitElement>>(baseElement: T) => {
 
         disconnectedCallback() {
             super.disconnectedCallback();
-            router.removeEventListener("route-changed", this._routeHandler);
-            router.removeEventListener("before-route-changed", this._beforeRouteChangedHandler);
+            router.removeEventListener("route-changed", this._routeHandler as any);
+            router.removeEventListener("before-route-changed", this._beforeRouteChangedHandler as any);
             window.removeEventListener("beforeunload", this._beforeUnloadHandler);
         }
 

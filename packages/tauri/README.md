@@ -1,56 +1,71 @@
-# @padloc/tauri
+# Padloc Tauri Desktop App
 
-Native cross-platform app, powered by
-[Tauri](https://github.com/tauri-apps/tauri).
+This package contains the Tauri-based desktop application for Padloc.
+
+## Features
+
+- Native desktop application for Windows, macOS, and Linux
+- Built with Tauri 2.0 for better performance and security
+- Integrated HTTP proxy for API requests
+- Full compatibility with Padloc server
+
+## Prerequisites
+
+- Node.js 22.x LTS
+- Rust 1.70+
+- Platform-specific build tools (see Tauri documentation)
 
 ## Setup
 
-The `@padloc/tauri` package is meant to be used from within the
-[Padloc monorepo](../../README.md).
-
-```sh
-git clone git@github.com:padloc/padloc.git
-cd padloc
-npm ci
-cd packages/tauri
+1. Install dependencies:
+```bash
+npm install
 ```
 
-You also need to follow
-[Tauri's setup guide](https://tauri.studio/docs/getting-started/intro/#setting-up-your-environment)
-
-## Building
-
-To build the app, run:
-
-```sh
-npm run build
+2. Configure server URL:
+```bash
+cp .env.example .env
+# Edit .env and set your PL_SERVER_URL
 ```
 
-The resulting build can be found in the `dist` folder.
-
-You can also build a debug version of the app, useful for - well - debugging:
-
-```sh
-npm run build:debug
+3. Build the application:
+```bash
+npm run tauri build
 ```
-
-### Build options
-
-All build options are provided as environment variables:
-
-| Variable Name   | Description                                        | Default  |
-| --------------- | -------------------------------------------------- | -------- |
-| `PL_SERVER_URL` | URL to the [server component](../server/README.md) | `./dist` |
 
 ## Development
 
-For rapid development, there is also dev mode:
-
-```sh
-npm run dev
+Run in development mode:
+```bash
+npm run tauri dev
 ```
 
-## Contributing
+## Architecture
 
-For info on how to contribute to Padloc, please refer to the
-[monorepo readme](../../README.md#contributing).
+The Tauri app uses a Rust-based HTTP proxy to handle API requests, bypassing CORS restrictions and providing better security.
+
+### Key Components:
+
+- **Rust Backend** (`src-tauri/`): Handles system integration and HTTP proxy
+- **Web Frontend** (`src/`): React-based UI shared with PWA version
+- **HTTP Proxy**: Routes API requests through Rust backend
+
+## Configuration
+
+Server URL can be configured via:
+1. Environment variable: `PL_SERVER_URL`
+2. `.env` file in the package directory
+3. Default fallback in `src/globals.ts`
+
+## Troubleshooting
+
+### CORS Issues
+The app includes a built-in proxy that handles CORS. Ensure the server URL is correctly configured.
+
+### Build Issues
+- Clear the target directory: `rm -rf src-tauri/target`
+- Reinstall dependencies: `npm clean-install`
+
+## License
+
+See main project LICENSE file.

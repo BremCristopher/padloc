@@ -4,6 +4,8 @@
 
 Simple, secure password and data management for individuals and teams.
 
+**Version 4.4.0** - Updated with Node.js 22 LTS support and Tauri desktop application.
+
 [![Deploy to DigitalOcean](https://www.deploytodo.com/do-btn-blue.svg)](https://cloud.digitalocean.com/apps/new?repo=https://github.com/padloc/padloc/tree/main)
 
 ## About
@@ -39,6 +41,21 @@ npm start
 ```
 
 The web client is now available at `http://localhost:8080`!
+
+### Building the Tauri Desktop App
+
+To build the native desktop application using Tauri:
+
+```sh
+# Development mode
+npm run tauri:dev
+
+# Build for production
+npm run tauri:build
+
+# Build with specific server URL
+PL_SERVER_URL=https://your-server.com npm run tauri:build
+```
 
 In-depth guides on how to host your own "productive" version of Padloc and how
 to build and distribute your own versions of the desktop and mobile apps are
@@ -80,6 +97,11 @@ git clone git@github.com:padloc/padloc.git
 cd padloc
 npm ci
 ```
+
+**Requirements:**
+- Node.js 22 LTS (recommended) or 18 LTS
+- npm 10.x
+- For Tauri builds: Rust toolchain (see [Tauri prerequisites](https://tauri.app/v1/guides/getting-started/prerequisites))
 
 This may take a minute, so maybe grab a cup of ☕️.
 

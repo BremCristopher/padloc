@@ -13,7 +13,9 @@ import { customElement, query, state, queryAll } from "lit/decorators.js";
 import { html, css } from "lit";
 import { selectFile } from "../lib/util";
 
-const fieldTypeOptions = Object.keys(FIELD_DEFS).map((fieldType) => ({
+const fieldTypeOptions: { label: string; value: FieldType | "skip" }[] = (
+    Object.keys(FIELD_DEFS) as (keyof typeof FIELD_DEFS)[]
+).map((fieldType) => ({
     label: FIELD_DEFS[fieldType].name as string,
     value: fieldType,
 }));
@@ -157,7 +159,7 @@ export class ImportDialog extends Dialog<File, void> {
                                     <pl-select
                                         id=${`itemColumnSelect-${itemColumnIndex}`}
                                         class="field-type-select"
-                                        icon=${FIELD_DEFS[itemColumn.type]?.icon || "text"}
+                                        icon=${FIELD_DEFS[itemColumn.type as FieldType]?.icon || "text"}
                                         .label=${$l("Field Type")}
                                         .options=${fieldTypeOptions}
                                         .value=${itemColumn.type}

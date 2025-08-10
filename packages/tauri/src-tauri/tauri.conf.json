@@ -1,70 +1,18 @@
 {
-    "package": {
-        "productName": "Padloc",
-        "version": "4.3.0"
-    },
+    "identifier": "app.padloc",
+    "productName": "Padloc",
+    "version": "4.3.0",
     "build": {
-        "distDir": "../dist",
-        "devPath": "http://localhost:8080",
+        "frontendDist": "../dist",
+        "devUrl": "http://localhost:8080",
         "beforeDevCommand": "npm run update:config && webpack serve",
-        "beforeBuildCommand": "npm run update:config && npm run tauricon ../../assets/app-icon.png && webpack"
+        "beforeBuildCommand": "npm run update:config && webpack"
     },
-    "tauri": {
-        "bundle": {
-            "active": true,
-            "targets": "all",
-            "identifier": "app.padloc",
-            "resources": [],
-            "externalBin": [],
-            "copyright": "",
-            "category": "DeveloperTool",
-            "shortDescription": "",
-            "longDescription": "",
-            "deb": {
-                "depends": []
-            },
-            "macOS": {
-                "frameworks": [],
-                "minimumSystemVersion": "",
-                "exceptionDomain": "",
-                "signingIdentity": null,
-                "entitlements": null
-            },
-            "windows": {
-                "certificateThumbprint": null,
-                "digestAlgorithm": "sha256",
-                "timestampUrl": ""
-            },
-            "icon": [
-                "icons/128x128.png",
-                "icons/32x32.png",
-                "icons/Square142x142Logo.png",
-                "icons/Square284x284Logo.png",
-                "icons/Square310x310Logo.png",
-                "icons/Square71x71Logo.png",
-                "icons/StoreLogo.png",
-                "icons/icon.ico",
-                "icons/128x128@2x.png",
-                "icons/Square107x107Logo.png",
-                "icons/Square150x150Logo.png",
-                "icons/Square30x30Logo.png",
-                "icons/Square44x44Logo.png",
-                "icons/Square89x89Logo.png",
-                "icons/icon.icns",
-                "icons/icon.png"
-            ]
-        },
-        "updater": {
-            "active": true,
-            "endpoints": ["https://github.com/padloc/padloc/releases/download/latest/tauri-update.json"],
-            "dialog": true,
-            "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDM5NDMxQ0I3MTA3NDU3RjIKUldUeVYzUVF0eHhET1ZpNUZDYWY3Zlk1aUN1ZkpXcU5wS0pSTERSay91ODBpWlBIcTViNk11RHgK"
-        },
-        "allowlist": {
-            "all": false
-        },
+    "app": {
+        "withGlobalTauri": false,
         "windows": [
             {
+                "label": "main",
                 "title": "Padloc",
                 "width": 1024,
                 "height": 768,
@@ -75,5 +23,39 @@
         "security": {
             "csp": null
         }
-    }
+    },
+    "bundle": {
+        "active": true,
+        "targets": "all",
+        "resources": [],
+        "copyright": "",
+        "category": "DeveloperTool",
+        "shortDescription": "",
+        "longDescription": "",
+        "icon": [
+            "icons/32x32.png",
+            "icons/128x128.png",
+            "icons/icon.icns",
+            "icons/icon.ico",
+            "icons/icon.png"
+        ],
+        "macOS": {
+            "frameworks": [],
+            "minimumSystemVersion": "",
+            "exceptionDomain": "",
+            "signingIdentity": null,
+            "entitlements": null
+        },
+        "windows": {
+            "certificateThumbprint": null,
+            "digestAlgorithm": "sha256",
+            "timestampUrl": ""
+        },
+        "linux": {
+            "deb": {
+                "depends": []
+            }
+        }
+    },
+    "plugins": {}
 }

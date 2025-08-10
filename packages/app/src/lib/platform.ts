@@ -22,7 +22,10 @@ import { EmailAuthClient } from "./auth/email";
 // import { openPopup } from "./util";
 
 const browserInfo = (async () => {
-    const { default: UAParser } = await import(/* webpackChunkName: "ua-parser" */ "ua-parser-js");
+    const UAParserModule = await import(/* webpackChunkName: "ua-parser" */ "ua-parser-js");
+    // @ts-ignore
+    const UAParser = UAParserModule.UAParser || UAParserModule.default || UAParserModule;
+    // @ts-ignore
     return new UAParser(navigator.userAgent).getResult();
 })();
 

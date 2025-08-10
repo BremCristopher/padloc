@@ -572,7 +572,7 @@ export class App {
     }
 
     /**
-     * Synchronizes the current account and all of the accounts organizations
+     * Synchronizes the current account and all the accounts organizations
      * and vaults
      */
     async synchronize() {

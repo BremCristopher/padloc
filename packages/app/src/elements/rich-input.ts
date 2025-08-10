@@ -1,4 +1,5 @@
-import { css, customElement, html, LitElement, property, query } from "lit-element";
+import { css, html, LitElement } from "lit";
+import { customElement, property, query } from "lit/decorators.js";
 import { Editor } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import { shared, content } from "../styles";
@@ -24,10 +25,10 @@ export class RichInput extends LitElement {
         if (this._editor.isFocused || this._markdownInput?.focused) {
             return;
         }
-        const html = markdownToHtml(md).replace(/\n/g, "");
-        this._editor.commands.clearContent();
-        this._editor.commands.insertContent(html);
         (async () => {
+            const html = (await markdownToHtml(md)).replace(/\n/g, "");
+            this._editor.commands.clearContent();
+            this._editor.commands.insertContent(html);
             await this.updateComplete;
             this._markdownInput.value = md;
         })();
@@ -58,7 +59,9 @@ export class RichInput extends LitElement {
     });
 
     firstUpdated() {
-        this.renderRoot.querySelector(".container")!.append(this._editor.options.element);
+        if (this._editor.options.element) {
+            this.renderRoot.querySelector(".container")!.append(this._editor.options.element);
+        }
         this.addEventListener("click", () => this._editor.commands.focus());
     }
 
@@ -78,7 +81,7 @@ export class RichInput extends LitElement {
         if (this.mode === "markdown") {
             this.mode = "wysiwyg";
             await this.updateComplete;
-            const html = markdownToHtml(this._markdownInput.value).replace(/\n/g, "");
+            const html = (await markdownToHtml(this._markdownInput.value)).replace(/\n/g, "");
             this._editor.commands.clearContent();
             this._editor.commands.insertContent(html);
             this._editor.commands.focus();
