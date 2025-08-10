@@ -51,7 +51,7 @@ export abstract class BaseContainer extends Serializable {
         this.encryptionParams.additionalData = await getProvider().randomBytes(16);
 
         // Encrypt the data and store it.
-        this.encryptedData = await getProvider().encrypt(this._key, data, this.encryptionParams);
+        this.encryptedData = Uint8Array.from(await getProvider().encrypt(this._key, data, this.encryptionParams));
     }
 
     /**
@@ -206,7 +206,7 @@ export class SharedContainer extends BaseContainer {
             data = await this.getData();
         }
 
-        // Updating the accessors also requires generating a new shared key
+        // Updating the accessors also requires generating a new key
         this._key = await getProvider().generateKey(new AESKeyParams());
 
         // Reencrypt data with new key

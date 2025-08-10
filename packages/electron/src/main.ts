@@ -2,8 +2,10 @@ import { app, BrowserWindow, Menu, dialog, shell, powerMonitor } from "electron"
 import { autoUpdater, UpdateInfo } from "electron-updater";
 // import * as os from "os";
 import ElectronStore from "electron-store";
+import { setupProxy } from "./proxy";
 
 const debug = process.argv.includes("--dbg");
+const useBundledApp = process.env.PL_USE_BUNDLED_APP === "true";
 const pwaUrl = process.env.PL_PWA_URL!.replace(/(\/*)$/, "");
 const appName = process.env.PL_APP_NAME!;
 const appScheme = process.env.PL_APP_SCHEME!;
@@ -125,6 +127,9 @@ function createWindow(path: string = "") {
         autoHideMenuBar: true,
         webPreferences: {
             devTools: debug,
+            nodeIntegration: true,
+            contextIsolation: false,
+            webSecurity: false,  // Allow CORS requests
         },
         minWidth,
         minHeight,
@@ -134,8 +139,13 @@ function createWindow(path: string = "") {
         win.webContents.openDevTools();
     }
 
-    // win.loadFile("index.html");
-    win.loadURL(`${pwaUrl}/${path}`);
+    // Load bundled app or external URL
+    if (useBundledApp) {
+        const indexPath = require("path").join(__dirname, "index.html");
+        win.loadFile(indexPath, { hash: path });
+    } else {
+        win.loadURL(`${pwaUrl}/${path}`);
+    }
 
     win.once("ready-to-show", () => {
         win.show();
@@ -151,9 +161,9 @@ function createWindow(path: string = "") {
     // });
 
     // Open links in browser
-    win.webContents.on("new-window", function (e, url) {
-        e.preventDefault();
+    win.webContents.setWindowOpenHandler(({ url }) => {
         shell.openExternal(url);
+        return { action: 'deny' };
     });
 
     return win;
@@ -263,8 +273,19 @@ function goToUrl(url: string) {
     const path = url.replace(/\w+:(\/*)/, "");
     console.log("opening app at path:", path);
     if (win) {
-        // win.loadURL(`${pwaUrl}/${path}`);
-        win.webContents.executeJavaScript(`router.go("${path}")`);
+        if (useBundledApp && win.webContents) {
+            // For bundled app, navigate using the router
+            win.webContents.executeJavaScript(`
+                if (window.router) {
+                    window.router.go("${path}");
+                } else {
+                    window.location.hash = "${path}";
+                }
+            `).catch(err => console.error("Failed to navigate:", err));
+        } else {
+            // For external URL, load the new URL
+            win.loadURL(`${pwaUrl}/${path}`);
+        }
     }
 }
 
@@ -304,6 +325,9 @@ async function start() {
     });
 
     await app.whenReady();
+
+    // Set up IPC proxy for CORS requests
+    setupProxy();
 
     // Quit app on suspend system event (can't lock it from here)
     powerMonitor.on("suspend", async () => {

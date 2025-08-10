@@ -1,16 +1,15 @@
-import { addHook, sanitize } from "dompurify";
-import { marked } from "marked";
+import DOMPurify from "dompurify";
+import { marked, Renderer } from "marked";
 import TurnDown from "turndown";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
 import { html } from "lit";
 
-marked.use({
-    renderer: {
-        code(content: string) {
-            return `<pre><code>${content.replace("\n", "<br>")}</code></pre>`;
-        },
-    },
-});
+const renderer = new Renderer();
+renderer.code = ({ text, lang }) => {
+    return `<pre><code class="language-${lang}">${text}</code></pre>`;
+};
+
+marked.use({ renderer });
 
 const turndown = new TurnDown({
     headingStyle: "atx",
@@ -71,21 +70,20 @@ turndown.addRule("li", {
 // });
 
 // Add a hook to make all links open a new window
-addHook("afterSanitizeAttributes", function (node) {
+DOMPurify.addHook("afterSanitizeAttributes", function (node) {
     // set all elements owning target to target=_blank
     if ("target" in node) {
         node.setAttribute("target", "_blank");
     }
 });
 
-export function markdownToHtml(md: string, san = true) {
-    let markup = marked(md, {
-        headerIds: false,
+export async function markdownToHtml(md: string, san = true) {
+    let markup = await marked(md, {
         gfm: true,
         breaks: true,
     });
     if (san) {
-        markup = sanitize(markup);
+        markup = DOMPurify.sanitize(markup);
     }
     return markup;
 }
@@ -94,7 +92,7 @@ export function htmlToMarkdown(html: string) {
     return turndown.turndown(html);
 }
 
-export function markdownToLitTemplate(md: string, san = true) {
-    const markup = markdownToHtml(md, san);
+export async function markdownToLitTemplate(md: string, san = true) {
+    const markup = await markdownToHtml(md, san);
     return html`${unsafeHTML(markup)}`;
 }

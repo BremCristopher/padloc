@@ -27,14 +27,16 @@ export class WebCryptoProvider implements CryptoProvider {
     }
 
     async hash(input: Uint8Array, params: HashParams): Promise<Uint8Array> {
-        const bytes = await webCrypto.digest({ name: params.algorithm }, input);
+        const bytes = await webCrypto.digest({ name: params.algorithm }, input as any);
         return new Uint8Array(bytes);
     }
 
     generateKey(params: AESKeyParams): Promise<AESKey>;
     generateKey(params: RSAKeyParams): Promise<{ privateKey: RSAPrivateKey; publicKey: RSAPublicKey }>;
     generateKey(params: HMACKeyParams): Promise<HMACKey>;
-    async generateKey(params: AESKeyParams | RSAKeyParams | HMACKeyParams) {
+    async generateKey(
+        params: AESKeyParams | RSAKeyParams | HMACKeyParams
+    ): Promise<AESKey | HMACKey | { privateKey: RSAPrivateKey; publicKey: RSAPublicKey }> {
         switch (params.algorithm) {
             case "AES":
             case "HMAC":
@@ -52,23 +54,18 @@ export class WebCryptoProvider implements CryptoProvider {
                     privateKey: new Uint8Array(privateKey),
                     publicKey: new Uint8Array(publicKey),
                 };
-            // case "HMAC":
-            //     const key = await webCrypto.generateKey(Object.assign({}, params, { name: params.algorithm }), true, [
-            //         "sign",
-            //         "verify"
-            //     ]);
-            //     const raw = await webCrypto.exportKey("raw", key);
-            //     return new Uint8Array(raw));
+            default:
+                throw new Err(ErrorCode.NOT_SUPPORTED);
         }
     }
 
     async deriveKey(password: Uint8Array, params: PBKDF2Params): Promise<SymmetricKey> {
-        const baseKey = await webCrypto.importKey("raw", password, params.algorithm, false, ["deriveBits"]);
+        const baseKey = await webCrypto.importKey("raw", password as any, params.algorithm, false, ["deriveBits"]);
 
         const key = await webCrypto.deriveBits(
             {
                 name: params.algorithm,
-                salt: params.salt!,
+                salt: new Uint8Array(params.salt!),
                 iterations: params.iterations,
                 hash: params.hash,
             },
@@ -134,18 +131,18 @@ export class WebCryptoProvider implements CryptoProvider {
             return SJCLProvider.encrypt(key, data, params);
         }
 
-        const k = await webCrypto.importKey("raw", key, params.algorithm, false, ["encrypt"]);
+        const k = await webCrypto.importKey("raw", key as any, params.algorithm, false, ["encrypt"]);
 
         try {
             const buf = await webCrypto.encrypt(
                 {
                     name: params.algorithm,
-                    iv: params.iv,
-                    additionalData: params.additionalData,
+                    iv: new Uint8Array(params.iv!),
+                    additionalData: params.additionalData ? new Uint8Array(params.additionalData) : undefined,
                     tagLength: params.tagSize,
                 },
                 k,
-                data
+                data as any
             );
 
             return new Uint8Array(buf);
@@ -159,18 +156,18 @@ export class WebCryptoProvider implements CryptoProvider {
             return SJCLProvider.decrypt(key, data, params);
         }
 
-        const k = await webCrypto.importKey("raw", key, params.algorithm, false, ["decrypt"]);
+        const k = await webCrypto.importKey("raw", key as any, params.algorithm, false, ["decrypt"]);
 
         try {
             const buf = await webCrypto.decrypt(
                 {
                     name: params.algorithm,
-                    iv: params.iv!,
-                    additionalData: params.additionalData!,
+                    iv: new Uint8Array(params.iv!),
+                    additionalData: params.additionalData ? new Uint8Array(params.additionalData) : undefined,
                     tagLength: params.tagSize,
                 },
                 k,
-                data
+                data as any
             );
 
             return new Uint8Array(buf);
@@ -181,9 +178,9 @@ export class WebCryptoProvider implements CryptoProvider {
 
     async _encryptRSA(publicKey: RSAPublicKey, key: AESKey, params: RSAEncryptionParams) {
         const p = Object.assign({}, params, { name: params.algorithm });
-        const k = await webCrypto.importKey("spki", publicKey, p, false, ["encrypt"]);
+        const k = await webCrypto.importKey("spki", publicKey as any, p, false, ["encrypt"]);
         try {
-            const buf = await webCrypto.encrypt(p, k, key);
+            const buf = await webCrypto.encrypt(p, k, key as any);
             return new Uint8Array(buf);
         } catch (e) {
             throw new Err(ErrorCode.DECRYPTION_FAILED);
@@ -192,9 +189,9 @@ export class WebCryptoProvider implements CryptoProvider {
 
     async _decryptRSA(privateKey: RSAPrivateKey, key: AESKey, params: RSAEncryptionParams) {
         const p = Object.assign({}, params, { name: params.algorithm });
-        const k = await webCrypto.importKey("pkcs8", privateKey, p, false, ["decrypt"]);
+        const k = await webCrypto.importKey("pkcs8", privateKey as any, p, false, ["decrypt"]);
         try {
-            const buf = await webCrypto.decrypt(p, k, key);
+            const buf = await webCrypto.decrypt(p, k, key as any);
             return new Uint8Array(buf);
         } catch (e) {
             throw new Err(ErrorCode.DECRYPTION_FAILED);
@@ -202,7 +199,7 @@ export class WebCryptoProvider implements CryptoProvider {
     }
 
     async fingerprint(key: RSAPublicKey): Promise<Uint8Array> {
-        const bytes = await webCrypto.digest("SHA-256", key);
+        const bytes = await webCrypto.digest("SHA-256", key as any);
         return new Uint8Array(bytes);
     }
 
@@ -248,8 +245,8 @@ export class WebCryptoProvider implements CryptoProvider {
 
     private async _signHMAC(key: HMACKey, data: Uint8Array, params: HMACParams): Promise<Uint8Array> {
         const p = Object.assign({}, params, { name: params.algorithm, length: params.keySize });
-        const k = await webCrypto.importKey("raw", key, p, false, ["sign"]);
-        const signature = await webCrypto.sign(p, k, data);
+        const k = await webCrypto.importKey("raw", key as any, p, false, ["sign"]);
+        const signature = await webCrypto.sign(p, k, data as any);
         return new Uint8Array(signature);
     }
 
@@ -260,14 +257,14 @@ export class WebCryptoProvider implements CryptoProvider {
         params: HMACParams
     ): Promise<boolean> {
         const p = Object.assign({}, params, { name: params.algorithm, length: params.keySize });
-        const k = await webCrypto.importKey("raw", key, p, false, ["verify"]);
-        return await webCrypto.verify(p, k, signature, data);
+        const k = await webCrypto.importKey("raw", key as any, p, false, ["verify"]);
+        return await webCrypto.verify(p, k, signature as any, data as any);
     }
 
     private async _signRSA(key: RSAPrivateKey, data: Uint8Array, params: RSASigningParams): Promise<Uint8Array> {
         const p = Object.assign({}, params, { name: params.algorithm });
-        const k = await webCrypto.importKey("pkcs8", key, p, false, ["sign"]);
-        const signature = await webCrypto.sign(p, k, data);
+        const k = await webCrypto.importKey("pkcs8", key as any, p, false, ["sign"]);
+        const signature = await webCrypto.sign(p, k, data as any);
         return new Uint8Array(signature);
     }
 
@@ -278,8 +275,8 @@ export class WebCryptoProvider implements CryptoProvider {
         params: RSASigningParams
     ): Promise<boolean> {
         const p = Object.assign({}, params, { name: params.algorithm });
-        const k = await webCrypto.importKey("spki", key, p, false, ["verify"]);
-        return await webCrypto.verify(p, k, signature, data);
+        const k = await webCrypto.importKey("spki", key as any, p, false, ["verify"]);
+        return await webCrypto.verify(p, k, signature as any, data as any);
     }
 }
 

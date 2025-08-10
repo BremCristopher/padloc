@@ -20,7 +20,7 @@ export class AESEncryptionParams extends Serializable {
     iv: Uint8Array = new Uint8Array();
 
     @AsBytes()
-    additionalData = new Uint8Array();
+    additionalData: Uint8Array<ArrayBufferLike> = new Uint8Array();
 
     validate() {
         return (
@@ -62,7 +62,7 @@ export class RSAKeyParams extends Serializable {
             this.algorithm === "RSA" &&
             this.modulusLength === 2048 &&
             this.hash === "SHA-256" &&
-            this.publicExponent instanceof Uint8Array
+            !!this.publicExponent
         );
     }
 }
@@ -86,9 +86,8 @@ export class PBKDF2Params extends Serializable {
             this.algorithm === "PBKDF2" &&
             this.hash === "SHA-256" &&
             this.keySize === 256 &&
-            typeof this.iterations === "number" &&
             this.iterations < PBKDF2_ITER_MAX &&
-            this.salt instanceof Uint8Array
+            !!this.salt
         );
     }
 }

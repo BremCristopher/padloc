@@ -1,4 +1,4 @@
-import { sanitize } from "dompurify";
+import DOMPurify from "dompurify";
 import { html } from "lit";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
 
@@ -12,7 +12,7 @@ export function loadScript(src: string, global?: string): Promise<any> {
     s.src = src;
     s.type = "text/javascript";
     const p = new Promise((resolve, reject) => {
-        s.onload = () => resolve(global ? window[global] : undefined);
+        s.onload = () => resolve(global ? (window as any)[global] : undefined);
         s.onerror = (e: any) => reject(e);
         document.head.appendChild(s);
     });
@@ -166,7 +166,7 @@ export function highlightJson(json: string) {
             } else if (/null/.test(match)) {
                 cls = "null";
             }
-            return '<span class="' + cls + '">' + sanitize(match) + "</span>";
+            return '<span class="' + cls + '">' + DOMPurify.sanitize(match) + "</span>";
         }
     );
 

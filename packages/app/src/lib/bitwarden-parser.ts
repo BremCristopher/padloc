@@ -198,12 +198,14 @@ export function parseToRowData(
 
     // Extract identity into extraFields
     if (item.type === BitwardenItemType.Identity && item.identity) {
-        Object.keys(item.identity).forEach((identityField) => {
-            rowData.extraFields.push({
-                name: identityField,
-                type: "text",
-                value: item.identity![identityField],
-            });
+        Object.entries(item.identity).forEach(([name, value]) => {
+            if (value) {
+                rowData.extraFields.push({
+                    name,
+                    type: "text",
+                    value,
+                });
+            }
         });
     }
 

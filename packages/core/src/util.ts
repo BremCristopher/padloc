@@ -213,7 +213,7 @@ export function capitalize(string: string) {
     return phrase;
 }
 
-export function stripPropertiesRecursive(obj: object, properties: string[]) {
+export function stripPropertiesRecursive(obj: any, properties: string[]) {
     for (const [key, value] of Object.entries(obj)) {
         if (properties.includes(key)) {
             delete obj[key];

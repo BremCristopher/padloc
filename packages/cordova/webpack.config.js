@@ -1,7 +1,9 @@
 const { resolve, join } = require("path");
-const { EnvironmentPlugin, optimize } = require("webpack");
+const webpack = require("webpack");
+const { EnvironmentPlugin, optimize } = webpack;
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 const { CleanWebpackPlugin } = require("clean-webpack-plugin");
+const CopyWebpackPlugin = require("copy-webpack-plugin");
 const { version } = require("./package.json");
 const sharp = require("sharp");
 
@@ -37,8 +39,18 @@ module.exports = {
                 use: ["style-loader", "css-loader"],
             },
             {
-                test: /\.(woff|woff2|eot|ttf|otf|svg)$/,
-                use: ["file-loader"],
+                test: /\.(woff|woff2|eot|ttf|otf)$/,
+                type: "asset/resource",
+                generator: {
+                    filename: "fonts/[name][ext]",
+                },
+            },
+            {
+                test: /\.svg$/,
+                type: "asset/resource",
+                generator: {
+                    filename: "images/[name][ext]",
+                },
             },
             {
                 test: /\.txt|md$/i,
@@ -78,9 +90,23 @@ module.exports = {
         new optimize.LimitChunkCountPlugin({
             maxChunks: 1,
         }),
+        new CopyWebpackPlugin({
+            patterns: [
+                {
+                    from: resolve(assetsDir, "fonts"),
+                    to: "fonts",
+                },
+            ],
+        }),
         {
             apply(compiler) {
-                compiler.hooks.emit.tapPromise("Prepare App Icons", async (compilation) => {
+                compiler.hooks.thisCompilation.tap("Prepare App Icons", (compilation) => {
+                    compilation.hooks.processAssets.tapPromise(
+                        {
+                            name: "Prepare App Icons",
+                            stage: webpack.Compilation.PROCESS_ASSETS_STAGE_ADDITIONAL,
+                        },
+                        async (assets) => {
                     const iconPath = join(assetsDir, "app-icon.png");
                     const { width } = await sharp(iconPath).metadata();
                     const iosPadding = Math.floor(width / 10);
@@ -122,7 +148,7 @@ module.exports = {
                                 .png({ quality: 100 })
                                 .toBuffer();
 
-                            compilation.assets[`res/icons/ios/app-icon-${size}.png`] = {
+                            assets[`res/icons/ios/app-icon-${size}.png`] = {
                                 source: () => icon,
                                 size: () => Buffer.byteLength(icon),
                             };
@@ -136,7 +162,7 @@ module.exports = {
                                 .png({ quality: 100 })
                                 .toBuffer();
 
-                            compilation.assets[`res/icons/android/app-icon-${size}.png`] = {
+                            assets[`res/icons/android/app-icon-${size}.png`] = {
                                 source: () => icon,
                                 size: () => Buffer.byteLength(icon),
                             };
@@ -151,7 +177,7 @@ module.exports = {
                         .jpeg({ quality: 100 })
                         .toBuffer();
 
-                    compilation.assets[`res/icons/ios/app-icon-1024.jpg`] = {
+                    assets[`res/icons/ios/app-icon-1024.jpg`] = {
                         source: () => storeIcon,
                         size: () => Buffer.byteLength(storeIcon),
                     };
@@ -160,12 +186,14 @@ module.exports = {
 <resources>
     <color name="background">${icon_background || background_color || "#ffffff"}</color>
 </resources>`;
-                    compilation.assets["res/icons/android/colors.xml"] = {
+                    assets["res/icons/android/colors.xml"] = {
                         source: () => colors,
                         size: () => colors.length,
                     };
 
-                    return true;
+                            return true;
+                        }
+                    );
                 });
             },
         },

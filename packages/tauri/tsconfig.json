@@ -1,3 +1,7 @@
 {
-    "extends": "../app/tsconfig.json"
+    "extends": "../app/tsconfig.json",
+    "compilerOptions": {
+        "skipLibCheck": true,
+        "suppressImplicitAnyIndexErrors": false
+    }
 }

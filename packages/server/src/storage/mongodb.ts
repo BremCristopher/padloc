@@ -144,7 +144,7 @@ export class MongoDBStorage implements Storage {
     ) {
         const res = cls instanceof Storable ? cls : new cls();
         const collection = await this._getCollection(res.kind);
-        const raw = await collection.findOne({ _id: useObjectId ? new ObjectId(id) : id });
+        const raw = await collection.findOne({ _id: useObjectId ? new ObjectId(id) : id } as any);
         if (!raw) {
             throw new Err(ErrorCode.NOT_FOUND, `Cannot find object: ${res.kind}_${id}`);
         }
@@ -161,7 +161,7 @@ export class MongoDBStorage implements Storage {
         const collection = await this._getCollection(obj.kind);
         const _id = useObjectId ? new ObjectId(obj.id) : obj.id;
         await collection.replaceOne(
-            { _id },
+            { _id } as any,
             { ...obj.toRaw(), _id },
             { upsert: true, writeConcern: { w: acknowledge ? 1 : 0 } }
         );
@@ -169,7 +169,7 @@ export class MongoDBStorage implements Storage {
 
     async delete<T extends Storable>(obj: T, { useObjectId = false }: { useObjectId?: boolean } = {}) {
         const collection = await this._getCollection(obj.kind);
-        await collection.deleteOne({ _id: useObjectId ? new ObjectId(obj.id) : obj.id });
+        await collection.deleteOne({ _id: useObjectId ? new ObjectId(obj.id) : obj.id } as any);
     }
 
     async clear() {
