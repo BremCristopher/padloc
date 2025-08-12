@@ -1,4 +1,4 @@
-pwm3.systex.com.cn {
+example.com {
     encode gzip zstd
     tls /certs/cert.pem /certs/key.key
 
